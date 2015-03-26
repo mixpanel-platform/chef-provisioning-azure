@@ -85,7 +85,7 @@ module AzureDriver
       image_id = machine_options[:image_id] || default_image_for_location(location)
 
       Chef::Log.debug "Azure bootstrap options: #{bootstrap_options.inspect}"
-      
+
       params = {
           vm_name: machine_spec.name,
           vm_user: bootstrap_options[:vm_user] || default_ssh_username,
@@ -111,7 +111,7 @@ module AzureDriver
 
       machine_spec.location['vm_name'] = vm.vm_name
       machine_spec.location['is_windows'] = (true if vm.os_type == 'Windows') || false
-      action_handler.report_progress "Created #{vm.vm_name} in #{location}..."      
+      action_handler.report_progress "Created #{vm.vm_name} in #{location}..."
     end
 
     # (see Chef::Provisioning::Driver#ready_machine)
@@ -134,6 +134,17 @@ module AzureDriver
 
       machine_for(machine_spec, machine_options, vm)
     end
+
+    def connect_to_machine(name, chef_server = nil)
+      if name.is_a?(MachineSpec)
+        machine_spec = name
+      else
+        machine_spec = Chef::Provisioning::ChefMachineSpec.get(name, chef_server)
+      end
+
+      machine_for(machine_spec, machine_spec.reference)
+    end
+
 
     # (see Chef::Provisioning::Driver#destroy_machine)
     def destroy_machine(action_handler, machine_spec, machine_options)
@@ -233,7 +244,7 @@ module AzureDriver
       remote_host = tcp_endpoint[:vip]
 
       # TODO: not this... replace with SSH key ASAP, only for getting this thing going...
-      ssh_options = { 
+      ssh_options = {
         password: machine_options[:password],
         port: tcp_endpoint[:public_port] # use public port from Cloud Service endpoint
       }
@@ -279,7 +290,7 @@ module AzureDriver
           :disable_sspi => winrm_transport_options['http']['disable_sspi'] || false, # default to Negotiate
           :basic_auth_only => winrm_transport_options['http']['basic_auth_only'] || false # disallow Basic auth by default
         }
-      end 
+      end
 
       merged_winrm_options = winrm_options.merge(shared_winrm_options)
       Chef::Provisioning::Transport::WinRM.new("#{endpoint}", type, merged_winrm_options, {})
